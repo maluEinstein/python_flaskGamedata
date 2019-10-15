@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="../static/echarts.min.js"></script>
+</head>
+<body>
+<div id="chart" style="width:1000px;height:400px;"></div>
+<p id="display"></p>
+<button onclick="selectData();">查询生成数据</button>
+<br>
+<input type="file" name="dayfile" id="dayfile">
+<button onclick="dayupload();">单日上传</button>
+<br>
+<input type="file" name="userfile" id="userfile">
+<button onclick="upload();">30日上传</button>
+<br>
+<progress id="progressBar" value="0" max="100" style="width: 300px;"></progress>
+<br>
+<button onclick="calData();">生成数据</button>
+<br>
+计算数据进度：
+<br>
+<progress id="calDataBar" value="0" max="100" style="width: 800px;"></progress>
+<p id="display2"></p>
+
+<script>
+    var t;
+    var summax=0;
+    var DAU=[];
+    var DRR=[];
+    var DRR7=[];
+    var AET=[];
+    var days=[];
+    function drawchart() {
+        var ct = echarts.init(document.getElementById("chart"));
+        var option = {
+            title: {
+                text: '游戏数据计算',
+            },
+            tooltip: {},
+            legend: {
+                data: ['DAU', 'DRR', 'DRR7', 'AET']
+            },
+            xAxis: {
+                data: days
+            },
+            yAxis: {},
+            series: [
+                {
+                    name: 'DAU',
+                    type: 'line',
+                    smooth:true,
+                    data: DAU
+                },
+                {
+                    name: 'DRR',
+                    type: 'line',
+                    smooth:true,
+                    data: DRR
+                },
+                {
+                    name: 'DRR7',
+                    type: 'line',
+                    smooth:true,
+                    data: DRR7
+                },
+                {
+                    name: 'AET',
+                    type: 'line',
+                    smooth:true,
+                    data: AET
+                }
+            ]
+        };
+        ct.setOption(option);
+    }
+
+    function calData() {
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+                document.getElementById('display2').innerText = xmlhttp.responseText;
+            }
+        };
+        xmlhttp.open('POST', 'http://127.0.0.1:5000/calData');
+        xmlhttp.send();
+        t = window.setInterval(selectDataLong, 100);
+    }
+
+    function selectDataLong() {
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+                console.log(xmlhttp.responseText);
+                var sum=xmlhttp.responseText.split('&')[0].split('=')[1];
+                var value=xmlhttp.responseText.split('&')[1].split('=')[1];
+                var progressBar = document.getElementById("calDataBar");
+                if(parseInt(value)>=parseInt(sum)){
+                    window.clearInterval(t)
+                }
+                progressBar.max = sum;
+                progressBar.value = value;
+            }
+        };
+        xmlhttp.open('POST', 'http://127.0.0.1:5000/selectDataLong');
+        xmlhttp.send();
+    }
+
+
+    function selectData() {
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+               var str= xmlhttp.responseText;
+               str=JSON.parse(str);
+                DRR=str.DRR;
+                DAU=str.DAU;
+                DRR7=str.DRR7;
+                AET=str.AET;
+                days=str.days;
+                drawchart()
+            }
+        };
+        xmlhttp.open("POST", "http://127.0.0.1:5000/selectData");
+        xmlhttp.send()
+    }
+
+
+    function upload() {
+        var userfile = document.getElementById('userfile');
+        var formData = new FormData();
+        formData.append("file", userfile.files[0]);
+        var xmlhttp = new XMLHttpRequest();
+        xmlhttp.onreadystatechange = function () {
+            if (xmlhttp.readyState === 4 && xmlhttp.status === 200) {
+                document.getElementById('display').innerText = xmlhttp.responseText;
+            }
+        };
+        xmlhttp.open("POST", "http://127.0.0.1:5000/upload");
+        xmlhttp.upload.onprogress = progressF;
+        xmlhttp.send(formData);
+    }
+
+    function dayupload() {
+        var dayfile=document.getElementById('dayfile');
+        var formData=new FormData();
+        formData.append('dayfile',dayfile.files[0])
+        var xmlhttp=new XMLHttpRequest();
+        xmlhttp.onreadystatechange=function () {
+            if(xmlhttp.readyState===4&&xmlhttp.status===200){
+                document.getElementById('display').innerText=xmlhttp.responseText;
+            }
+        };
+        xmlhttp.open('POST','http://127.0.0.1:5000/dayUpload');
+        xmlhttp.upload.onprogress=progressF;
+        xmlhttp.send();
+    }
+
+    function progressF(evt) {
+        var progressBar = document.getElementById("progressBar");
+        if (evt.lengthComputable) {
+            progressBar.max = evt.total;
+            progressBar.value = evt.loaded;
+        }
+    }
+</script>
+</body>
+</html>
