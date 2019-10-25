@@ -21,6 +21,7 @@ class DRR7(threading.Thread):
             if DRR7.__len__()<days.__len__():
                 temdays=days[DRR7.__len__()-1:]
                 for i in temdays:
+                    pass
 
 
 
